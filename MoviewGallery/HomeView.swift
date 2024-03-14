@@ -9,17 +9,27 @@ import SwiftUI
 
 struct HomeView: View {
     @StateObject var galleryViewModel = GalleryViewModel()
-    
+    @State var isDetailShown = false
+    @State private var selectedImage: Image?
+    @State private var selectedItem: ImageModel?
+    @Namespace private var animation
     var body: some View {
-        Group {
+        ZStack {
             if let images = galleryViewModel.images {
                 ScrollView(showsIndicators: false) {
                     Gallery(with: images)
-                        .padding()
+                        .padding(.horizontal, 5)
                         .padding(.bottom, 10)
                     
                     Status()
+                        .padding(.top, 12)
                 }
+            }
+            
+            if isDetailShown, let image = selectedImage, let selectedItem = selectedItem {
+                DetailView(isDetailShown: $isDetailShown, image: .constant(image), selectedItem: selectedItem, animation: animation)
+                    .zIndex(10)
+                    //.transition(.scale)//(.asymmetric(insertion: .identity, removal: .scale))
             }
         }
         .onAppear {
@@ -36,16 +46,26 @@ struct HomeView: View {
                 if let image = phase.image {
                     GeometryReader { proxy in
                         let size = proxy.size
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: size.width, height: size.height)
-                            .cornerRadius(6)
-                            .onAppear {
-                                if images.last?.id == item.id {
-                                    galleryViewModel.startFetch = true
-                                }
+                        
+                        Button {
+                            withAnimation(.spring(duration: 0.35)) {
+                                selectedImage = image
+                                selectedItem = item
+                                isDetailShown.toggle()
                             }
+                        } label: {
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: size.width, height: size.height)
+                                .cornerRadius(6)
+                                .onAppear {
+                                    if images.last?.id == item.id {
+                                        galleryViewModel.startFetch = true
+                                    }
+                                }
+                        }
+                        .matchedGeometryEffect(id: item.id, in: animation)
                     }
                 }
             }
